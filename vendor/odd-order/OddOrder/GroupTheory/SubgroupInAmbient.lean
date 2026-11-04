@@ -1,0 +1,580 @@
+/-
+Copyright (c) 2026 Yawara Ishida. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yawara Ishida
+-/
+module
+
+public import OddOrder.Isaacs.Ch03_SplitExtensions.Main
+public import OddOrder.GroupTheory.OpResidual
+
+@[expose] public section
+
+/-!
+# Subgroup constructions realized in the ambient group
+
+Shared low-level `OddOrder.GroupTheory` module for two constructions that BG
+(Chapters II–IV) and Peterfalvi (Sections 10–16) both need, realized as
+subgroups of the *ambient* group `G` rather than of the subgroup `H`:
+
+* `derivedInG H` — the derived subgroup `H'` of `H`, mapped back into `G`.
+* `opiCoreInG π H` — the `pi`-core `O_π(H)` of `H`, mapped back into `G`.
+
+These were originally duplicated as `BG.Ch2.S07.{derivedInG, opiCoreInG}` and as
+`GroupTheory.{derivedInAmbient, piCoreIn, pCoreIn, pPrimeCoreIn}`; this file is
+the single canonical home (issue 0052). It sits low in the import graph (only
+`Isaacs.Ch03`) so every consumer can import it cheaply.
+-/
+
+namespace OddOrder.GroupTheory
+
+open OddOrder.Isaacs
+
+variable {G : Type*} [Group G]
+
+/-- **`H'` in `G`**: the derived subgroup `commutator ↥H` of a subgroup `H`,
+mapped back into the ambient group `G` via `H.subtype`. -/
+def derivedInG (H : Subgroup G) : Subgroup G :=
+  (commutator ↥H).map H.subtype
+
+/-- **`O_π(H)` in `G`**: the `π`-core of the subgroup `H` (largest normal
+`π`-subgroup of `↥H`), mapped back into the ambient group `G` via `H.subtype`.
+`opiCoreInG {p} H = O_p(H)` and `opiCoreInG {p}ᶜ H = O_{p'}(H)`, both in `G`. -/
+def opiCoreInG (π : Set ℕ) (H : Subgroup G) : Subgroup G :=
+  (Ch03.oPiCore π ↥H).map H.subtype
+
+/-- `O_π(H) ≤ H` in the ambient group. -/
+theorem opiCoreInG_le (π : Set ℕ) (H : Subgroup G) : opiCoreInG π H ≤ H :=
+  Subgroup.map_subtype_le _
+
+/-- The order of `opiCoreInG π H` agrees with the order of the `π`-core of `↥H`. -/
+theorem card_opiCoreInG (π : Set ℕ) (H : Subgroup G) :
+    Nat.card ↥(opiCoreInG π H) = Nat.card ↥(Ch03.oPiCore π ↥H) :=
+  (Nat.card_congr (Subgroup.equivMapOfInjective _ H.subtype
+    H.subtype_injective).toEquiv).symm
+
+/-- `opiCoreInG π H` is a `π`-subgroup (ambient form of `oPiCore.isPiGroup`). -/
+theorem isPiSubgroup_opiCoreInG [Finite G] (π : Set ℕ) (H : Subgroup G) :
+    Subgroup.IsPiSubgroup π (opiCoreInG π H) := by
+  intro r hr
+  rw [card_opiCoreInG] at hr
+  exact Ch03.oPiCore.isPiGroup π r hr
+
+/-- A subgroup of a pi-subgroup which is also a pi-complement subgroup is trivial. -/
+theorem eq_bot_of_le_of_isPiSubgroup_of_isPiSubgroup_compl [Finite G] {π : Set ℕ}
+    {H N : Subgroup G} (hNH : N ≤ H) (hHpi : Subgroup.IsPiSubgroup π H)
+    (hNpic : Subgroup.IsPiSubgroup πᶜ N) :
+    N = ⊥ := by
+  apply Subgroup.card_eq_one.mp
+  have hEmpty : (Nat.card ↥N).primeFactors = ∅ := by
+    apply Finset.eq_empty_iff_forall_notMem.mpr
+    intro r hr
+    have hrH : r ∈ (Nat.card ↥H).primeFactors :=
+      Nat.mem_primeFactors.mpr
+        ⟨(Nat.mem_primeFactors.mp hr).1,
+          (Nat.mem_primeFactors.mp hr).2.1.trans (Subgroup.card_dvd_of_le hNH),
+          Nat.card_pos.ne'⟩
+    have hr_not_pi : r ∉ π := by
+      simpa using hNpic r hr
+    exact hr_not_pi (hHpi r hrH)
+  rcases Nat.primeFactors_eq_empty.mp hEmpty with hzero | hone
+  · exact False.elim (Nat.card_pos.ne' hzero)
+  · exact hone
+
+/-- A `π`-subgroup and a `π`-complement subgroup intersect trivially. -/
+theorem inf_eq_bot_of_isPiSubgroup_of_isPiSubgroup_compl [Finite G] {π : Set ℕ}
+    {H K : Subgroup G} (hHpi : Subgroup.IsPiSubgroup π H)
+    (hKpi : Subgroup.IsPiSubgroup πᶜ K) :
+    H ⊓ K = ⊥ := by
+  refine eq_bot_of_le_of_isPiSubgroup_of_isPiSubgroup_compl inf_le_left hHpi ?_
+  intro r hr
+  exact hKpi r
+    (Nat.primeFactors_mono (Subgroup.card_dvd_of_le inf_le_right) Nat.card_pos.ne' hr)
+
+/-- If H is a pi-subgroup, then its ambient pi-complement core is trivial. -/
+theorem opiCoreInG_compl_eq_bot_of_isPiSubgroup [Finite G] {π : Set ℕ} {H : Subgroup G}
+    (hHpi : Subgroup.IsPiSubgroup π H) :
+    opiCoreInG πᶜ H = ⊥ :=
+  eq_bot_of_le_of_isPiSubgroup_of_isPiSubgroup_compl
+    (opiCoreInG_le πᶜ H) hHpi (isPiSubgroup_opiCoreInG πᶜ H)
+
+/-- The orders of a pi-subgroup and a pi-complement subgroup are coprime. -/
+theorem coprime_card_of_isPiSubgroup_of_isPiSubgroup_compl [Finite G]
+    {π : Set ℕ} {H K : Subgroup G} (hHpi : Subgroup.IsPiSubgroup π H)
+    (hKpi : Subgroup.IsPiSubgroup πᶜ K) :
+    Nat.Coprime (Nat.card ↥H) (Nat.card ↥K) :=
+  OddOrder.Isaacs.Ch03.Nat.coprime_of_isPiGroup_of_isPiGroup_compl
+    (π := π) Nat.card_pos.ne' Nat.card_pos.ne' hHpi hKpi
+
+/-- If an element lies in a pi-subgroup and its cyclic subgroup is a pi-complement
+subgroup, then the element is trivial. -/
+theorem eq_one_of_mem_of_isPiSubgroup_of_zpowers_isPiSubgroup_compl [Finite G]
+    {π : Set ℕ} {H : Subgroup G} (hHpi : Subgroup.IsPiSubgroup π H)
+    {x : G} (hxH : x ∈ H) (hxpi : Subgroup.IsPiSubgroup πᶜ (Subgroup.zpowers x)) :
+    x = 1 := by
+  have hZle : Subgroup.zpowers x ≤ H := Subgroup.zpowers_le.mpr hxH
+  have hZbot : Subgroup.zpowers x = ⊥ :=
+    eq_bot_of_le_of_isPiSubgroup_of_isPiSubgroup_compl hZle hHpi hxpi
+  have hxZ : x ∈ Subgroup.zpowers x := Subgroup.mem_zpowers x
+  rw [hZbot] at hxZ
+  exact Subgroup.mem_bot.mp hxZ
+
+/-- A finite subgroup is a pi-subgroup if every element whose cyclic subgroup is a
+pi-complement subgroup is trivial. -/
+theorem isPiSubgroup_of_forall_zpowers_isPiSubgroup_compl_eq_one [Finite G]
+    {π : Set ℕ} {H : Subgroup G}
+    (htriv : ∀ x : G, x ∈ H → Subgroup.IsPiSubgroup πᶜ (Subgroup.zpowers x) → x = 1) :
+    Subgroup.IsPiSubgroup π H := by
+  intro q hq
+  by_contra hq_not_pi
+  have : Fact q.Prime := ⟨Nat.prime_of_mem_primeFactors hq⟩
+  obtain ⟨x, hx_order⟩ :=
+    exists_prime_orderOf_dvd_card' (G := ↥H) q (Nat.mem_primeFactors.mp hq).2.1
+  have hxH : (x : G) ∈ H := x.2
+  have hZpi : Subgroup.IsPiSubgroup πᶜ (Subgroup.zpowers (x : G)) := by
+    intro r hr
+    have hZcard : Nat.card ↥(Subgroup.zpowers (x : G)) = q := by
+      rw [Nat.card_zpowers]
+      exact (orderOf_injective H.subtype (Subgroup.subtype_injective H) x).trans hx_order
+    have hrq : r = q := by
+      rw [hZcard, Nat.Prime.primeFactors (Fact.out : q.Prime), Finset.mem_singleton] at hr
+      exact hr
+    rw [hrq]
+    simpa using hq_not_pi
+  have hx_one : (x : G) = 1 := htriv (x : G) hxH hZpi
+  have hx_sub_one : x = 1 := Subtype.ext hx_one
+  have hq_one : q = 1 := by
+    rw [← hx_order, hx_sub_one, orderOf_one]
+  exact (Fact.out : q.Prime).ne_one hq_one
+
+/-- A q-group is a singleton pi-subgroup (`isPiSubgroup_of_isPGroup_of_mem` at `π = {q}`;
+kept as a named corollary for its 19 call sites, issue 9130). -/
+theorem isPiSubgroup_singleton_of_isPGroup [Finite G] {q : ℕ} [Fact q.Prime]
+    {H : Subgroup G} (hH : IsPGroup q ↥H) : Subgroup.IsPiSubgroup {q} H :=
+  Subgroup.isPiSubgroup_of_isPGroup_of_mem hH rfl
+
+/-- A `{q}`-subgroup is a `q`-group. -/
+theorem isPGroup_of_isPiSubgroup_singleton [Finite G] {q : ℕ} [Fact q.Prime]
+    {H : Subgroup G} (hH : Subgroup.IsPiSubgroup {q} H) : IsPGroup q ↥H :=
+  IsPGroup.of_card (Nat.eq_prime_pow_of_unique_prime_dvd Nat.card_pos.ne'
+    (fun {d} hd hdvd => Set.mem_singleton_iff.mp
+      (hH d (Nat.mem_primeFactors.mpr ⟨hd, hdvd, Nat.card_pos.ne'⟩))))
+
+/-- `O_q(H)` in the ambient group is a `q`-group. -/
+theorem isPGroup_opiCoreInG_singleton [Finite G] {q : ℕ} [Fact q.Prime]
+    (H : Subgroup G) : IsPGroup q ↥(opiCoreInG ({q} : Set ℕ) H) :=
+  isPGroup_of_isPiSubgroup_singleton (isPiSubgroup_opiCoreInG ({q} : Set ℕ) H)
+
+/-- If `N ≤ H` is normal in `H` and is a `π`-subgroup, then it lies in the
+ambient realization of `O_π(H)`. -/
+theorem le_opiCoreInG_of_normal_of_isPiSubgroup {π : Set ℕ} {H N : Subgroup G}
+    (hNH : N ≤ H) (hNnorm : (N.subgroupOf H).Normal)
+    (hNpi : Subgroup.IsPiSubgroup π N) :
+    N ≤ opiCoreInG π H := by
+  have := hNnorm
+  have hNpi_sub : Ch03.Subgroup.IsPiGroup π (N.subgroupOf H) := by
+    intro r hr
+    refine hNpi r ?_
+    rwa [Nat.card_congr (Subgroup.subgroupOfEquivOfLe hNH).toEquiv] at hr
+  calc N = (N.subgroupOf H).map H.subtype :=
+      (Subgroup.map_subgroupOf_eq_of_le hNH).symm
+    _ ≤ (Ch03.oPiCore π ↥H).map H.subtype :=
+        Subgroup.map_mono (Ch03.Subgroup.IsPiGroup.le_oPiCore hNpi_sub)
+    _ = opiCoreInG π H := rfl
+
+/-- **`H` normalizes `O_π(H)`** (in the ambient group): the `π`-core is characteristic
+in `↥H`, so conjugation by an element of `H` (which restricts to an automorphism of
+`↥H`) fixes its image in `G`. -/
+theorem le_normalizer_opiCoreInG (π : Set ℕ) (H : Subgroup G) :
+    H ≤ Subgroup.normalizer (opiCoreInG π H) := by
+  intro x hx
+  rw [Subgroup.mem_normalizer_iff]
+  intro y
+  have hfix := Subgroup.characteristic_iff_comap_eq.mp
+    (Ch03.oPiCore.characteristic π ↥H) (MulAut.conj (⟨x, hx⟩ : ↥H))
+  constructor
+  · rintro ⟨z, hz, rfl⟩
+    refine ⟨MulAut.conj (⟨x, hx⟩ : ↥H) z, ?_, rfl⟩
+    have h1 : z ∈ (Ch03.oPiCore π ↥H).comap
+        (MulAut.conj (⟨x, hx⟩ : ↥H)).toMonoidHom := by
+      rw [hfix]
+      exact hz
+    exact Subgroup.mem_comap.mp h1
+  · intro hy
+    obtain ⟨z, hz, hz_eq⟩ := hy
+    have hy_mem : y ∈ H := by
+      have hyH : x * y * x⁻¹ ∈ H := hz_eq ▸ z.2
+      have h1 : x⁻¹ * (x * y * x⁻¹) * x = y := by group
+      rw [← h1]
+      exact H.mul_mem (H.mul_mem (H.inv_mem hx) hyH) hx
+    have hzy : z = MulAut.conj (⟨x, hx⟩ : ↥H) (⟨y, hy_mem⟩ : ↥H) := by
+      apply Subtype.ext
+      simpa [MulAut.conj_apply] using hz_eq
+    have h2 : (⟨y, hy_mem⟩ : ↥H) ∈ (Ch03.oPiCore π ↥H).comap
+        (MulAut.conj (⟨x, hx⟩ : ↥H)).toMonoidHom := by
+      rw [Subgroup.mem_comap]
+      rw [hzy] at hz
+      exact hz
+    rw [hfix] at h2
+    exact ⟨⟨y, hy_mem⟩, h2, rfl⟩
+
+
+/-- Any subgroup normalizing `H` also normalizes the ambient realization of `O_π(H)`. -/
+theorem le_normalizer_opiCoreInG_of_le_normalizer (π : Set ℕ) {A H : Subgroup G}
+    (hAH : A ≤ Subgroup.normalizer (H : Set G)) :
+    A ≤ Subgroup.normalizer (opiCoreInG π H) := by
+  intro x hx
+  rw [Subgroup.mem_normalizer_iff]
+  intro y
+  have hxH : x ∈ Subgroup.normalizer (H : Set G) := hAH hx
+  let ψ : MulAut ↥H := H.normalizerMonoidHom ⟨x, hxH⟩
+  have hfix := Subgroup.characteristic_iff_comap_eq.mp
+    (Ch03.oPiCore.characteristic π ↥H) ψ
+  constructor
+  · rintro ⟨z, hz, rfl⟩
+    refine ⟨ψ z, ?_, ?_⟩
+    · have hzCore : z ∈ (Ch03.oPiCore π ↥H).comap ψ.toMonoidHom := by
+        rw [hfix]
+        exact hz
+      exact Subgroup.mem_comap.mp hzCore
+    · change ↑(ψ z) = x * ↑z * x⁻¹
+      rfl
+  · intro hy
+    obtain ⟨z, hz, hz_eq⟩ := hy
+    have hyH : y ∈ H :=
+      (Subgroup.mem_normalizer_iff.mp hxH y).mpr (hz_eq ▸ z.2)
+    have hzy : z = (MulEquiv.toMonoidHom ψ) ⟨y, hyH⟩ := by
+      apply Subtype.ext
+      change (z : G) = x * y * x⁻¹
+      exact hz_eq
+    have hyCore : (⟨y, hyH⟩ : ↥H) ∈ (Ch03.oPiCore π ↥H).comap ψ.toMonoidHom := by
+      rw [Subgroup.mem_comap]
+      rw [← hzy]
+      exact hz
+    rw [hfix] at hyCore
+    exact ⟨⟨y, hyH⟩, hyCore, rfl⟩
+
+/-- If `H` is normal in the ambient group, then the ambient realization of `O_π(H)`
+is normal as well. -/
+theorem opiCoreInG_normal (π : Set ℕ) {H : Subgroup G} [H.Normal] :
+    (opiCoreInG π H).Normal := by
+  rw [← Subgroup.normalizer_eq_top_iff]
+  apply eq_top_iff.mpr
+  have htop_le_norm_H : (⊤ : Subgroup G) ≤ Subgroup.normalizer (H : Set G) := by
+    rw [Subgroup.normalizer_eq_top]
+  exact le_normalizer_opiCoreInG_of_le_normalizer π htop_le_norm_H
+
+/-- **A `π`-subgroup that is normal in a subnormal subgroup lies in `O_π(G)`.**
+
+This is the induction-friendly (strengthened) form of
+`le_oPiCore_of_isSubnormal`: we induct on the subnormal chain of `K`, not on `S`.
+A naive induction on `S` fails because the inductive step would need the intermediate
+subgroup `K` to be a `π`-group, which it need not be. Passing through `O_π(K)` — which
+*is* a `π`-group, and is normal in the next term of the chain because it is characteristic
+in `K` — closes the induction. -/
+theorem le_oPiCore_of_normal_in_isSubnormal [Finite G] {π : Set ℕ} {K : Subgroup G}
+    (hK : K.IsSubnormal) : ∀ {S : Subgroup G}, S ≤ K → (S.subgroupOf K).Normal →
+      Subgroup.IsPiSubgroup π S → S ≤ Ch03.oPiCore π G := by
+  induction hK with
+  | top =>
+    intro S hSK hSn hSpi
+    have : S.Normal := by
+      rw [← Subgroup.normalizer_eq_top_iff, eq_top_iff]
+      exact (Subgroup.normal_subgroupOf_iff_le_normalizer hSK).mp hSn
+    exact Ch03.Subgroup.IsPiGroup.le_oPiCore hSpi
+  | step K L hKL hLsn hKn ih =>
+    intro S hSK hSn hSpi
+    have hcore_le : opiCoreInG π K ≤ L := (opiCoreInG_le π K).trans hKL
+    refine (le_opiCoreInG_of_normal_of_isPiSubgroup hSK hSn hSpi).trans
+      (ih hcore_le ?_ (isPiSubgroup_opiCoreInG π K))
+    exact (Subgroup.normal_subgroupOf_iff_le_normalizer hcore_le).mpr
+      (le_normalizer_opiCoreInG_of_le_normalizer π
+        ((Subgroup.normal_subgroupOf_iff_le_normalizer hKL).mp hKn))
+
+/-- **A subnormal `π`-subgroup lies in `O_π(G)`.**
+
+Specialising `le_oPiCore_of_normal_in_isSubnormal` to `K = S`. The normal case
+(`le_opiCoreInG_of_normal_of_isPiSubgroup`) is the maximality of `O_π`; this is the
+subnormal upgrade, used by Isaacs Problem 9C.1 to produce `O_p(G) > 1` from a nontrivial
+subnormal `p`-subgroup. -/
+theorem le_oPiCore_of_isSubnormal [Finite G] {π : Set ℕ} {S : Subgroup G}
+    (hS : S.IsSubnormal) (hSpi : Subgroup.IsPiSubgroup π S) : S ≤ Ch03.oPiCore π G :=
+  le_oPiCore_of_normal_in_isSubnormal hS le_rfl
+    (by rw [Subgroup.subgroupOf_self]; infer_instance) hSpi
+
+/-- **A self-normalizing `p`-subgroup of a Sylow overgroup is the whole Sylow.**
+If a subgroup `P ≤ Q` of a Sylow `p`-subgroup `Q` of `G` has the property that every element of `Q`
+normalizing `P` already lies in `P` (`P.normalizer ⊓ Q ≤ P`), then `P = Q`.
+
+This is the normalizer-growth half of Sylow theory: `Q` is a `p`-group, hence nilpotent, hence
+satisfies the normalizer condition; the hypothesis says `P.subgroupOf Q` is self-normalizing in
+`↥Q` (via `subgroupOf_normalizer_eq`), and a self-normalizing subgroup of a group with the
+normalizer condition is the whole group, so `P.subgroupOf Q = ⊤`, i.e. `Q ≤ P`.
+
+The intended use: a `p`-subgroup `P` with `N_G(P) = L` such that every `p`-element of `L` lies in
+`P` (e.g. `P` the unique normal Sylow `p`-subgroup of `L`) is itself Sylow in `G` — take a Sylow
+overgroup `Q ⊇ P`, and `N_G(P) ⊓ Q = L ⊓ Q ≤ P` because `Q`-elements are `p`-elements. -/
+theorem sylow_coe_eq_of_normalizer_inf_le [Finite G] {p : ℕ} [Fact p.Prime]
+    {Q : Sylow p G} {P : Subgroup G} (hPQ : P ≤ (Q : Subgroup G))
+    (hle : Subgroup.normalizer P ⊓ (Q : Subgroup G) ≤ P) :
+    (Q : Subgroup G) = P := by
+  have : Group.IsNilpotent ↥(Q : Subgroup G) := Q.isPGroup'.isNilpotent
+  have hnc : NormalizerCondition ↥(Q : Subgroup G) := Group.normalizerCondition_of_isNilpotent
+  -- `P.subgroupOf Q` is self-normalizing in `↥Q`.
+  have hself : Subgroup.normalizer (P.subgroupOf (Q : Subgroup G)) =
+      P.subgroupOf (Q : Subgroup G) := by
+    rw [← Subgroup.subgroupOf_normalizer_eq hPQ]
+    refine le_antisymm (fun x hx => ?_) (fun x hx => ?_) <;>
+      rw [Subgroup.mem_subgroupOf] at hx ⊢
+    · exact hle ⟨hx, x.2⟩
+    · exact P.le_normalizer hx
+  have htop : P.subgroupOf (Q : Subgroup G) = ⊤ :=
+    (normalizerCondition_iff_only_full_group_self_normalizing.mp hnc) _ hself
+  exact le_antisymm (Subgroup.subgroupOf_eq_top.mp htop) hPQ
+
+open Subgroup in
+/-- **`H ⊔ C` is normal when `H ◁ G`, `C ◁ U`, and `G = H ⊔ U`.**  In a group generated by a normal
+subgroup `H` and a subgroup `U` (`H ⊔ U = ⊤`), the join `H ⊔ C` of `H` with any `U`-normal subgroup
+`C ≤ U` is normal in `G`.  This is the standard "`H ⋊ C ◁ H ⋊ U`" fact:
+
+* `H` normalizes `H ⊔ C`: for `h ∈ H`, `c ∈ C`, `h c h⁻¹ = [h,c]·c` with `[h,c] ∈ H` (`H ◁ G`), so
+  `h c h⁻¹ ∈ H·C`;
+* `U` normalizes `H ⊔ C`: for `u ∈ U`, `u H u⁻¹ = H` (`H ◁ G`) and `u C u⁻¹ = C` (`C ◁ U`).
+
+Since `H ⊔ U = ⊤`, all of `G` normalizes `H ⊔ C`.  This is the (9.9.a) normality `HC ◁ HU`, with
+`C = C_U(H̄)` the kernel of the `U`-action on the chief factor (automatically `◁ U`). -/
+theorem sup_normal_of_normal_left_of_normal_subgroupOf {H U C : Subgroup G} [hH : H.Normal]
+    (hCU : C ≤ U) [hC : (C.subgroupOf U).Normal] (hsup : H ⊔ U = ⊤) :
+    (H ⊔ C).Normal := by
+  -- `C ◁ U`, read as a conjugation fact in `G`.
+  have hConjU : ∀ u ∈ U, ∀ c ∈ C, u * c * u⁻¹ ∈ C := by
+    intro u hu c hc
+    have hmem : (⟨c, hCU hc⟩ : ↥U) ∈ C.subgroupOf U := by rw [Subgroup.mem_subgroupOf]; exact hc
+    have hconj := hC.conj_mem ⟨c, hCU hc⟩ hmem ⟨u, hu⟩
+    rw [Subgroup.mem_subgroupOf] at hconj
+    simpa using hconj
+  -- Conjugating `c ∈ C` by `h ∈ H` lands in `H ⊔ C` (`= [h,c]·c`, `[h,c] ∈ H` as `H ◁ G`).
+  have hConjH : ∀ h ∈ H, ∀ c ∈ C, h * c * h⁻¹ ∈ H ⊔ C := by
+    intro h hh c hc
+    have hcomm : h * c * h⁻¹ * c⁻¹ ∈ H := by
+      have h2 : h * (c * h⁻¹ * c⁻¹) ∈ H := mul_mem hh (hH.conj_mem h⁻¹ (inv_mem hh) c)
+      rwa [show h * (c * h⁻¹ * c⁻¹) = h * c * h⁻¹ * c⁻¹ by group] at h2
+    rw [show h * c * h⁻¹ = (h * c * h⁻¹ * c⁻¹) * c by group]
+    exact mul_mem (Subgroup.mem_sup_left hcomm) (Subgroup.mem_sup_right hc)
+  rw [← normalizer_eq_top_iff, eq_top_iff, ← hsup, sup_le_iff]
+  refine ⟨fun h hh => ?_, fun u hu => ?_⟩
+  · rw [Subgroup.mem_normalizer_iff]
+    have key : ∀ h ∈ H, ∀ n ∈ H ⊔ C, h * n * h⁻¹ ∈ H ⊔ C := by
+      intro h hh n hn
+      rw [Subgroup.mem_sup_of_normal_left] at hn
+      obtain ⟨a, ha, b, hb, rfl⟩ := hn
+      rw [show h * (a * b) * h⁻¹ = (h * a * h⁻¹) * (h * b * h⁻¹) by group]
+      exact mul_mem (Subgroup.mem_sup_left (hH.conj_mem a ha h)) (hConjH h hh b hb)
+    intro n
+    refine ⟨key h hh n, fun hn => ?_⟩
+    have := key h⁻¹ (inv_mem hh) _ hn
+    rwa [show h⁻¹ * (h * n * h⁻¹) * h⁻¹⁻¹ = n by group] at this
+  · rw [Subgroup.mem_normalizer_iff]
+    have key : ∀ u ∈ U, ∀ n ∈ H ⊔ C, u * n * u⁻¹ ∈ H ⊔ C := by
+      intro u hu n hn
+      rw [Subgroup.mem_sup_of_normal_left] at hn
+      obtain ⟨a, ha, b, hb, rfl⟩ := hn
+      rw [show u * (a * b) * u⁻¹ = (u * a * u⁻¹) * (u * b * u⁻¹) by group]
+      exact mul_mem (Subgroup.mem_sup_left (hH.conj_mem a ha u))
+        (Subgroup.mem_sup_right (hConjU u hu b hb))
+    intro n
+    refine ⟨key u hu n, fun hn => ?_⟩
+    have := key u⁻¹ (inv_mem hu) _ hn
+    rwa [show u⁻¹ * (u * n * u⁻¹) * u⁻¹⁻¹ = n by group] at this
+
+section /- `O_π` の ambient 版の同型同変性 (issue 9131) -/
+
+/-- **`opiCoreInG` は群同型と可換**: `(O_π(H)).map e = O_π(H.map e)` (`e : G ≃* G'`).
+
+`Ch03.oPiCore.map_eq_of_mulEquiv` (部分群の中の `O_π` の同型不変性) を
+`e` が誘導する同型 `↥H ≃* ↥(H.map e)` に当て, `subtype` との合成を組み替えたもの.
+
+Thm 9.23 の `V`-branch (`K = H^g` について `|K : O_p(K)| = |H : O_p(H)|` を出す) で使う. -/
+theorem map_opiCoreInG_mulEquiv {G' : Type*} [Group G'] (π : Set ℕ) (e : G ≃* G')
+    (H : Subgroup G) :
+    (opiCoreInG π H).map (e : G →* G') = opiCoreInG π (H.map (e : G →* G')) := by
+  let e' : ↥H ≃* ↥(H.map (e : G →* G')) :=
+    Subgroup.equivMapOfInjective H (e : G →* G') e.injective
+  have hcomp : (H.map (e : G →* G')).subtype.comp (e' : ↥H →* ↥(H.map (e : G →* G')))
+      = (e : G →* G').comp H.subtype := by ext x; rfl
+  calc (opiCoreInG π H).map (e : G →* G')
+      = (Ch03.oPiCore π ↥H).map ((e : G →* G').comp H.subtype) := by
+        rw [opiCoreInG, Subgroup.map_map]
+    _ = (Ch03.oPiCore π ↥H).map
+          ((H.map (e : G →* G')).subtype.comp (e' : ↥H →* ↥(H.map (e : G →* G')))) := by
+        rw [hcomp]
+    _ = ((Ch03.oPiCore π ↥H).map (e' : ↥H →* ↥(H.map (e : G →* G')))).map
+          (H.map (e : G →* G')).subtype := by rw [← Subgroup.map_map]
+    _ = opiCoreInG π (H.map (e : G →* G')) := by
+        rw [Ch03.oPiCore.map_eq_of_mulEquiv π e']; rfl
+
+end
+
+/-- **群同型は中心を中心へ写す**: `Z(G).map e = Z(G')` (`e : G ≃* G'`). -/
+theorem map_center_mulEquiv {G' : Type*} [Group G'] (e : G ≃* G') :
+    (Subgroup.center G).map (e : G →* G') = Subgroup.center G' := by
+  ext y
+  constructor
+  · rintro ⟨x, hx, rfl⟩
+    exact (MulEquivClass.apply_mem_center_iff e).mpr hx
+  · intro hy
+    exact ⟨e.symm y, (MulEquivClass.apply_mem_center_iff e.symm).mpr hy, by simp⟩
+
+/-- `H ⊓ K` は `K` の内側で見ても外側で見ても同じ群: `H.subgroupOf K ≃* H ⊓ K`. -/
+noncomputable def subgroupOfMulEquivInf (H K : Subgroup G) :
+    ↥(H.subgroupOf K) ≃* ↥(H ⊓ K) :=
+  (Subgroup.equivMapOfInjective (H.subgroupOf K) K.subtype K.subtype_injective).trans
+    (MulEquiv.subgroupCongr (Subgroup.subgroupOf_map_subtype H K))
+
+/-- `H ⊓ K` は `K` の内側で見ても外側で見ても同じ位数. -/
+theorem natCard_subgroupOf (H K : Subgroup G) :
+    Nat.card ↥(H.subgroupOf K) = Nat.card ↥(H ⊓ K) :=
+  Nat.card_congr (subgroupOfMulEquivInf H K).toEquiv
+
+/-- **正規部分群と交わらない部分群は商へ単射に写る**: `K ⊓ N = ⊥` なら `K ≃* K N/N`.
+商写像の核が `N` で, `K` はそれを避けるので `K` への制限が単射. -/
+noncomputable def mapMk'MulEquiv {N K : Subgroup G} [N.Normal] (h : K ⊓ N = ⊥) :
+    ↥K ≃* ↥(K.map (QuotientGroup.mk' N)) :=
+  have hinj : Function.Injective ((QuotientGroup.mk' N).comp K.subtype) := by
+    rw [← MonoidHom.ker_eq_bot_iff, eq_bot_iff]
+    intro x hx
+    have hx' : ((x : G) : G ⧸ N) = 1 := MonoidHom.mem_ker.mp hx
+    have hmem : (x : G) ∈ K ⊓ N :=
+      Subgroup.mem_inf.mpr ⟨x.2, (QuotientGroup.eq_one_iff (x : G)).mp hx'⟩
+    rw [h, Subgroup.mem_bot] at hmem
+    exact Subgroup.mem_bot.mpr (Subtype.ext hmem)
+  (MonoidHom.ofInjective hinj).trans
+    (MulEquiv.subgroupCongr (by rw [MonoidHom.range_comp, Subgroup.range_subtype]))
+
+/-- `K ⊓ N = ⊥` なら `|K N/N| = |K|`. -/
+theorem natCard_map_mk'_of_inf_eq_bot {N K : Subgroup G} [N.Normal] (h : K ⊓ N = ⊥) :
+    Nat.card ↥(K.map (QuotientGroup.mk' N)) = Nat.card ↥K :=
+  (Nat.card_congr (mapMk'MulEquiv h).toEquiv).symm
+
+/-- **中心による商は群同型に沿って移る**: `G ⧸ Z(G) ≃* G' ⧸ Z(G')`.
+
+`map_center_mulEquiv` を `QuotientGroup.congr` に食わせただけだが, 「`Z` で割った商」は
+同型不変であるという事実そのものが必要になる場面 (中心の自明性・単純性の移送) が多い. -/
+def quotientCenterCongr {G' : Type*} [Group G'] (e : G ≃* G') :
+    (G ⧸ Subgroup.center G) ≃* (G' ⧸ Subgroup.center G') :=
+  QuotientGroup.congr _ _ e (map_center_mulEquiv e)
+
+/-- `N ⊴ W` の characteristic 部分群 `L : Subgroup ↥N` は, `↥N` から `W` へ押し出すと `W` で正規。
+共役自己同型 `MulAut.conjNormal w : MulAut ↥N` (`N ⊴ W` ゆえ各 `w ∈ W` の共役が `↥N` の自己同型に
+制限) が `L` を固定する (`characteristic_iff_map_eq`)。 -/
+theorem normal_map_subtype_of_characteristic {W : Type*} [Group W] {N : Subgroup W} [N.Normal]
+    {L : Subgroup ↥N} (hL : L.Characteristic) : (L.map N.subtype).Normal := by
+  refine ⟨fun a ha w => ?_⟩
+  obtain ⟨⟨a', ha'N⟩, ha'L, rfl⟩ := ha
+  have hmap : L.map (MulAut.conjNormal w).toMonoidHom = L :=
+    (Subgroup.characteristic_iff_map_eq.mp hL) (MulAut.conjNormal w)
+  have hmem : (MulAut.conjNormal w) ⟨a', ha'N⟩ ∈ L := by
+    rw [← hmap]; exact Subgroup.mem_map_of_mem _ ha'L
+  exact ⟨(MulAut.conjNormal w) ⟨a', ha'N⟩, hmem, MulAut.conjNormal_apply w ⟨a', ha'N⟩⟩
+
+section /- 積分解 `G = XY` に沿った帰納法の道具 -/
+
+open scoped Pointwise
+
+/-- **真部分群の位数評価**: `|G| ≤ n + 1` かつ `X < ⊤` なら `|X| ≤ n`.
+
+`Nat.card G` についての強帰納法で真部分群に降りるときの定型 (Isaacs Problems 9B.5 / 9C.2). -/
+theorem card_le_of_lt_top [Finite G] {n : ℕ} (hcard : Nat.card G ≤ n + 1) {X : Subgroup G}
+    (hX : X < ⊤) : Nat.card ↥X ≤ n := by
+  have hne : Nat.card ↥X ≠ Nat.card G := fun h => hX.ne (Subgroup.eq_top_of_card_eq _ h)
+  have hle := Subgroup.card_le_card_group X
+  omega
+
+/-- **積分解は左右対称**: `A · B = G` なら `B · A = G` (両辺の逆元を取るだけ). -/
+theorem mul_eq_univ_comm {A B : Subgroup G} (h : (A : Set G) * (B : Set G) = Set.univ) :
+    (B : Set G) * (A : Set G) = Set.univ := by
+  ext g
+  simp only [Set.mem_univ, iff_true]
+  have hg : g⁻¹ ∈ (A : Set G) * (B : Set G) := by rw [h]; trivial
+  obtain ⟨a, ha, b, hb, hab⟩ := hg
+  have hab' : a * b = g⁻¹ := hab
+  refine ⟨b⁻¹, Subgroup.inv_mem _ hb, a⁻¹, Subgroup.inv_mem _ ha, ?_⟩
+  change b⁻¹ * a⁻¹ = g
+  rw [← mul_inv_rev, hab', inv_inv]
+
+/-- **積分解の Dedekind 降下**: `X ≤ X₁` かつ `X · Y = G` なら `↥X₁` の中で
+`(X ∩ X₁) · (Y ∩ X₁) = X₁`, すなわち `X₁ = X (Y ∩ X₁)`.
+
+Isaacs Problem 9B.5 (`G^∞ = A^∞B^∞`) と 9C.2 (`O^p(G) = O^p(A)O^p(B)`) は
+どちらもこの段で帰納法を `↥X₁` に降ろす。⚠ 仮説が join `X ⊔ Y = ⊤` でなく**積**
+`X · Y = G` でなければならない: 部分群束は一般に modular でないので、Dedekind の恒等式
+`X (Y ∩ X₁) = (XY) ∩ X₁` は積についてしか使えない。 -/
+theorem subgroupOf_mul_inf_subgroupOf_eq_univ {X Y X₁ : Subgroup G} (hXX₁ : X ≤ X₁)
+    (hXY : (X : Set G) * (Y : Set G) = Set.univ) :
+    ((X.subgroupOf X₁ : Subgroup ↥X₁) : Set ↥X₁) *
+      (((Y ⊓ X₁).subgroupOf X₁ : Subgroup ↥X₁) : Set ↥X₁) = Set.univ := by
+  ext x
+  simp only [Set.mem_univ, iff_true]
+  have hx : (x : G) ∈ (X : Set G) * (Y : Set G) := by rw [hXY]; trivial
+  obtain ⟨a, ha, b, hb, hab⟩ := hx
+  have haX₁ : a ∈ X₁ := hXX₁ ha
+  have hbX₁ : b ∈ X₁ := by
+    have hbe : b = a⁻¹ * (x : G) := by rw [← hab]; group
+    rw [hbe]
+    exact Subgroup.mul_mem _ (Subgroup.inv_mem _ haX₁) x.2
+  exact ⟨⟨a, haX₁⟩, ha, ⟨b, hbX₁⟩, ⟨hb, hbX₁⟩, Subtype.ext hab⟩
+
+/-- **部分群の集合積は大きい方に吸収される (右吸収)**: `X ≤ Y` なら `X · Y = Y`. -/
+theorem coe_mul_coe_eq_right {X Y : Subgroup G} (h : X ≤ Y) :
+    (X : Set G) * (Y : Set G) = (Y : Set G) := by
+  refine Set.Subset.antisymm ?_ fun y hy => ⟨1, X.one_mem, y, hy, one_mul y⟩
+  rintro z ⟨a, ha, b, hb, rfl⟩
+  exact Y.mul_mem (h ha) hb
+
+/-- **部分群の集合積は大きい方に吸収される (左吸収)**: `Y ≤ X` なら `X · Y = X`. -/
+theorem coe_mul_coe_eq_left {X Y : Subgroup G} (h : Y ≤ X) :
+    (X : Set G) * (Y : Set G) = (X : Set G) := by
+  refine Set.Subset.antisymm ?_ fun x hx => ⟨x, hx, 1, Y.one_mem, mul_one x⟩
+  rintro z ⟨a, ha, b, hb, rfl⟩
+  exact X.mul_mem ha (h hb)
+
+/-- **`Y` が `X` を正規化するなら join は集合積**: `↑(X ⊔ Y) = ↑X * ↑Y`.
+`Subgroup.mul_normal` (`X` が ambient 正規のとき) の normalizer 条件版。
+`X·Y` が積閉・逆元閉であることを normalizer 条件から直接確かめ、`X ⊔ Y` との
+相互包含を取る。 -/
+theorem coe_sup_eq_mul_of_le_normalizer {X Y : Subgroup G}
+    (h : Y ≤ Subgroup.normalizer (X : Set G)) :
+    ((X ⊔ Y : Subgroup G) : Set G) = (X : Set G) * (Y : Set G) := by
+  have hconj : ∀ y ∈ Y, ∀ x ∈ X, y * x * y⁻¹ ∈ X := fun y hy x hx =>
+    (Subgroup.mem_normalizer_iff.mp (h hy) x).mp hx
+  have hmul : ∀ {a b : G}, a ∈ (X : Set G) * (Y : Set G) → b ∈ (X : Set G) * (Y : Set G) →
+      a * b ∈ (X : Set G) * (Y : Set G) := by
+    rintro _ _ ⟨x₁, hx₁, y₁, hy₁, rfl⟩ ⟨x₂, hx₂, y₂, hy₂, rfl⟩
+    exact ⟨x₁ * (y₁ * x₂ * y₁⁻¹), X.mul_mem hx₁ (hconj y₁ hy₁ x₂ hx₂),
+      y₁ * y₂, Y.mul_mem hy₁ hy₂, by group⟩
+  have hinv : ∀ {a : G}, a ∈ (X : Set G) * (Y : Set G) → a⁻¹ ∈ (X : Set G) * (Y : Set G) := by
+    rintro _ ⟨x, hx, y, hy, rfl⟩
+    exact ⟨y⁻¹ * x⁻¹ * y⁻¹⁻¹, hconj y⁻¹ (Y.inv_mem hy) x⁻¹ (X.inv_mem hx), y⁻¹, Y.inv_mem hy,
+      by group⟩
+  let S : Subgroup G :=
+    { carrier := (X : Set G) * (Y : Set G)
+      one_mem' := ⟨1, X.one_mem, 1, Y.one_mem, one_mul 1⟩
+      mul_mem' := hmul
+      inv_mem' := hinv }
+  refine Set.Subset.antisymm (show X ⊔ Y ≤ S from sup_le ?_ ?_) ?_
+  · exact fun x hx => ⟨x, hx, 1, Y.one_mem, mul_one x⟩
+  · exact fun y hy => ⟨1, X.one_mem, y, hy, one_mul y⟩
+  · rintro z ⟨x, hx, y, hy, rfl⟩
+    exact Subgroup.mul_mem _ (Subgroup.mem_sup_left hx) (Subgroup.mem_sup_right hy)
+
+/-- 積分解 `X · Y = G` は join `X ⊔ Y = ⊤` を含意する (逆は一般に偽). -/
+theorem sup_eq_top_of_mul_eq_univ {X Y : Subgroup G}
+    (hXY : (X : Set G) * (Y : Set G) = Set.univ) : X ⊔ Y = ⊤ := by
+  refine top_le_iff.mp fun g _ => ?_
+  have hg : g ∈ (X : Set G) * (Y : Set G) := by rw [hXY]; trivial
+  obtain ⟨a, ha, b, hb, rfl⟩ := hg
+  exact Subgroup.mul_mem _ (Subgroup.mem_sup_left ha) (Subgroup.mem_sup_right hb)
+
+end
+
+end OddOrder.GroupTheory

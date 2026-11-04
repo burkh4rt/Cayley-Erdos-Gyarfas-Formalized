@@ -1,0 +1,162 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mathlib-initiative/formalization.yaml/main/schema/formalization.schema.json
+version: "v0.4"
+
+project:
+  name: "Odd-ordered Cayley graphs satisfy Erdős–Gyárfás"
+  description: >-
+    Every Cayley graph of a finite group of odd order with an inverse-closed,
+    identity-free generating set of size at least three contains a simple cycle
+    of length 2^n for some n ≥ 2. For a noncyclic group of odd order, two such
+    cycles can be chosen as translates meeting at exactly one vertex. A
+    symmetric figure-eight lifts through an abelian normal subgroup of an
+    odd-order group, and a power-of-two cycle lifts through a normal 2-subgroup
+    of a finite group. The cycle conclusion also holds for finite nilpotent
+    groups with a generating set satisfying the same degree condition.
+  authors: ["Michael C. Burkhart"]
+  responsible_maintainers: ["Michael C. Burkhart"]
+  license: "Apache-2.0"
+
+classification:
+  arxiv: ["math.CO", "math.GR"]
+  msc2020: ["05C38", "05C25"]
+
+sources:
+  - title: "Odd-ordered Cayley graphs satisfy Erdős–Gyárfás"
+    authors: ["Michael C. Burkhart"]
+    type: "arXiv preprint"
+    id: "arXiv:2611.05060v1"
+    location: "https://arxiv.org/abs/2611.05060v1"
+    relationship: "formalizes"
+    note: >-
+      Version of 3 November 2026. Theorem 1.1, the noncyclic strengthening
+      immediately following it, Lemmas 1.2 and 1.3, and Corollary 1.4.
+      Sections 2 and 3 contain the proofs. REVIEW.md compares their arguments
+      with the Lean proofs.
+    license: "arXiv perpetual, non-exclusive license to distribute (https://arxiv.org/licenses/nonexclusive-distrib/1.0/)"
+
+related_formalizations:
+  - id: "Erdős–Gyárfás–Cayley-Draft-Formalized, local Git commit 6615bdcb0d5692c56b5f597d3704385f25b227f5"
+    relationship: "builds-on"
+    note: >-
+      Earlier Lean development of a draft of the same paper. This project
+      carries forward its substantive Lean proofs and vendored dependency.
+      The statement surface, namespace, comparison configuration, manuscript
+      alignment and review record were revised for arXiv v1.
+  - id: "https://github.com/yawara/odd-order/tree/7a412eae81e9510a684fd8c180cf1fbd47b8d00d"
+    relationship: "builds-on"
+    note: >-
+      Yawara Ishida's formal proofs of Feit–Thompson and the Singer-field
+      construction supply the group-theoretic dependency. The adapted source
+      closure, upstream license, patch and checksums are in vendor/odd-order.
+
+status:
+  scope: >-
+    The four numbered results and the noncyclic strengthening are proved.
+    The five intentional holes in the independent Challenge are excluded from
+    the count below. The Solution and its imported proof development use no
+    unproved literature assumptions.
+  sorry_count: 0
+  sorry_in_definitions: 0
+  axioms: ["propext", "Classical.choice", "Quot.sound"]
+  main_results:
+    - declaration: "CayleyErdősGyárfás.odd_order_cayley_contains_two_power_cycle"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "CayleyErdősGyárfás.noncyclic_odd_order_symmetric_figure_eight"
+      file: "CayleyErdosGyarfas/OddOrderMain.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "CayleyErdősGyárfás.symmetric_figure_eight_lifts_of_abelian"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "CayleyErdősGyárfás.two_power_cycle_lifts_of_normal_two_subgroup"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "CayleyErdősGyárfás.nilpotent_cayley_contains_two_power_cycle"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+
+automation:
+  methods:
+    - method: "agent"
+      models: ["GPT-6 (Codex)"]
+      framework: "Codex"
+      tool_setup: >-
+        The earlier draft project records AI-assisted proof construction and
+        dependency porting. For this version, Codex agents compared the proofs
+        with the revised manuscript, updated the Lean statements and proof
+        adapters, and prepared the metadata and local verification.
+      prompting_notes: >-
+        Prepare a Palomar project for arXiv:2611.05060 using the earlier
+        formalization and assess fidelity against the revised manuscript.
+  notes: >-
+    Michael C. Burkhart is the author of the source paper and the responsible
+    maintainer named in the earlier project. His personal verification of the
+    current Challenge is pending.
+
+fidelity:
+  divergences: >-
+    The independent statements use the paper's simple undirected Cayley
+    graph, standing generating-set assumptions, and exponent n ≥ 2. No extra
+    group-theoretic hypothesis is imposed. Lemma 1.2 constructs compatible
+    lifts of segments directly. Lemma 1.3 follows from a general cycle lift
+    whose length multiplier is the order of a kernel element. The odd-order
+    induction retains the paper's four affine cases and cycle words, with
+    algebraic certificates for coordinate and intersection checks.
+    The pure 2-group case uses a commuting square or an alternating cycle.
+    REVIEW.md gives the correspondence for each result and distinguishes
+    intermediate calculations from the five compared conclusions.
+
+review:
+  status: "agent-reviewed"
+  reviewers: []
+  notes: >-
+    AI-assisted comparison against the versioned arXiv source covers the
+    hypotheses, cycle length, left translation and cyclic rotation,
+    quotient generating sets, and proof methods. The author intends to verify
+    this Challenge personally before submission. VERIFICATION.md records the
+    separate mechanical checks.
+
+alignment:
+  namespace: "CayleyErdősGyárfás"
+  statements:
+    - source: "Theorem 1.1"
+      lean: "CayleyErdősGyárfás.odd_order_cayley_contains_two_power_cycle"
+      module: "Solution"
+      status: "proved"
+    - source: "Unnumbered noncyclic strengthening immediately following Theorem 1.1"
+      lean: "CayleyErdősGyárfás.noncyclic_odd_order_symmetric_figure_eight"
+      module: "CayleyErdosGyarfas.OddOrderMain"
+      status: "proved"
+    - source: "Lemma 1.2"
+      lean: "CayleyErdősGyárfás.symmetric_figure_eight_lifts_of_abelian"
+      module: "Solution"
+      status: "proved"
+    - source: "Lemma 1.3"
+      lean: "CayleyErdősGyárfás.two_power_cycle_lifts_of_normal_two_subgroup"
+      module: "Solution"
+      status: "proved"
+    - source: "Corollary 1.4"
+      lean: "CayleyErdősGyárfás.nilpotent_cayley_contains_two_power_cycle"
+      module: "Solution"
+      status: "proved"
+
+acknowledgements: >-
+  Lean and Mathlib supply the proof environment and standard mathematical
+  definitions. Yawara Ishida's odd-order development supplies the group
+  theory identified above. The project layout and verification scripts draw
+  on PalomarRegistry/PalomarTemplate at 2891de4c48955af824969a263d31b25e7a9a1406.

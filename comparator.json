@@ -1,0 +1,16 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "CayleyErdősGyárfás.odd_order_cayley_contains_two_power_cycle",
+    "CayleyErdősGyárfás.noncyclic_odd_order_symmetric_figure_eight",
+    "CayleyErdősGyárfás.symmetric_figure_eight_lifts_of_abelian",
+    "CayleyErdősGyárfás.two_power_cycle_lifts_of_normal_two_subgroup",
+    "CayleyErdősGyárfás.nilpotent_cayley_contains_two_power_cycle"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

@@ -1,0 +1,132 @@
+/-
+Copyright (c) 2026 Yawara Ishida. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yawara Ishida
+-/
+module
+
+public import OddOrder.Peterfalvi.S15_SAndT_Setup
+public import OddOrder.Peterfalvi.S12_MaximalIII_IV_V_Core
+public import OddOrder.GroupTheory.RepresentationTheory.PrimeTIResidue
+
+@[expose] public section
+
+/-!
+# The `S`-side prime-TI residue grid of the `(13.1)` hypothesis (Peterfalvi §13, issues 9014/9076)
+
+Peterfalvi's §13 `μ`-grid `μ_{ij} ∈ Irr(S)` (the field `S15.Hypothesis.mu`) is, mathematically, the
+**prime-TI residue grid** of `S` — the constituents `mu2_ i j` of the cyclic-TI isometry images,
+whose theory is ported (constructor-complete, `sorry`-free) in
+`OddOrder.GroupTheory.RepresentationTheory.PrimeTIResidue` (`PrimeTIResidueData`,
+`PrimeTIResidueData.ofS06Hypothesis`).
+
+The `(13.18)` cross-column facts that `S15_HonestTypeP2A0` isolates as prime-TI pins
+(`mu_row0_ne` = row-`0` distinctness, `tauS_mu_row0_diff_support`, `tauS_mu_row0_vanish_on_V`) are
+consequences of this residue grid — **not** of the §12 `Hypothesis.muGrid` (which is nominally
+gated on the type-III/IV/V = `IsTypeP1` Dade datum, whereas `S` is type-`P2`).  The resolution
+recorded here: the residue grid `mu2 = (columnFamily χ₂).mu` is built purely from the certain-type
+`S06.Hypothesis` (the `.toHypothesis` part of the §6/§10 machinery), which is **type-uniform** — it
+needs only `TypePData S`, `S ∈ maximalSubgroups G`, and `IsTypeP S` (obtained from the symmetric
+`S_nonI` carrier), and
+the Hall coprimality.  So the same `columnFamily.mu` grid that §12 uses for type-`P1` maximals is
+available for the type-`P2` group `S`, via `typePData_toS06Hypothesis`, with **no** `IsTypeP1` need.
+
+## Contents
+
+* `Hypothesis.s06S` — the certain-type `S06.Hypothesis ↥S` built from `hyp.Sdata` (type-uniform).
+* `Hypothesis.residueS` — the prime-TI residue datum `PrimeTIResidueData ↥S S' q p` for `S`, via
+  the `sorry`-free constructor `PrimeTIResidueData.ofS06Hypothesis`.
+
+## References
+
+* Peterfalvi, *Character Theory for the Odd Order Theorem* (LMS LNS 272, 2000), §4 (4.3)/(4.5).
+* Coq: `PFsection4.v` (`primeTIred`, `prTIres_irr_cases`), `PFsection13.v` (`S1cases`).
+* `issues/9014-primeti-residue-api.md`, `issues/9076-cyclicti-rigidity-dade-crossrel.md`.
+-/
+
+namespace OddOrder.Peterfalvi.S15
+
+open OddOrder.RepresentationTheory
+open scoped BigOperators
+
+variable {G : Type*} [Group G]
+
+open scoped FiniteInduce in
+/-- **The certain-type `S06.Hypothesis` of the `S`-side (type-uniform).**  From the type-`P` datum
+`hyp.Sdata : TypePData S` and `S`'s maximality + type-`P` status (`IsTypeP S`, obtained from the
+carried `S_nonI` alternative — no `IsTypeP1` needed), `typePData_toS06Hypothesis` supplies the §6
+certain-type Hypothesis on `↥S`.  This is the common source of the `μ`-grid (`columnFamily.mu`)
+that §12 uses for type-`P1` maximals, here made available for the type-`P2` group `S`. -/
+noncomputable def Hypothesis.s06S [Finite G] (hyp : Hypothesis (G := G))
+    (hG : OddOrder.BG.IsMinimalSimpleOdd G) : OddOrder.Peterfalvi.S06.Hypothesis ↥hyp.S :=
+  OddOrder.Peterfalvi.S12.typePData_toS06Hypothesis hyp.Sdata hG.odd
+    (OddOrder.Peterfalvi.S12.typePData_W1_hall_coprime hG hyp.S_maximal
+      (OddOrder.BG.Ch4.S16.isTypeP_of_isTypeNonI hG hyp.S_maximal hyp.S_nonI) hyp.Sdata)
+
+open scoped FiniteInduce in
+/-- **The `S`-side prime-TI residue datum** (Peterfalvi (4.3.b)/(4.5.a), §13 `μ`-grid).  The
+residue grid `PrimeTIResidueData ↥S S' |W₁| |W₂|` of `S`, assembled by the `sorry`-free constructor
+`PrimeTIResidueData.ofS06Hypothesis` from the type-uniform certain-type Hypothesis `hyp.s06S hG`.
+Its `mu2 i j = (columnFamily χ₂).mu i` is exactly the object §12 calls `muGrid` — here for the
+type-`P2` group `S`, with no `IsTypeP1` requirement.  The kernel-family subgroup is taken to be `⊤`
+(the whole `S'`); every residue `chi_ j` (`j ≠ 0`) is then non-trivial, which is all the downstream
+`(13.18)` facts (distinctness, difference support, `V`-value) use.
+
+The `Fintype`/`Invertible` data instances come uniformly from the scoped `FiniteInduce`
+instances (`finiteSubFintype`/`natCardInvC`) — *not* from binders — so that every consumer sees
+the *same* instance terms and the `mu2`-projection stays cheaply definitionally comparable
+(instance-argument mismatches otherwise break `columnFamily`-level unification).  Only the
+`Prop`-valued `NeZero` side conditions remain binders (proof-irrelevant, so harmless). -/
+noncomputable def Hypothesis.residueS [Finite G] (hyp : Hypothesis (G := G))
+    (hG : OddOrder.BG.IsMinimalSimpleOdd G)
+    [NeZero (Nat.card ↥(hyp.s06S hG).W1)] [NeZero (Nat.card ↥(hyp.s06S hG).W2)] :
+    PrimeTIResidueData ↥hyp.S (hyp.s06S hG).K
+      (Nat.card ↥(hyp.s06S hG).W1) (Nat.card ↥(hyp.s06S hG).W2) :=
+  PrimeTIResidueData.ofS06Hypothesis (hyp.s06S hG) ⊤ le_top
+
+/-! ## Support-set relation: honest `A(S)` `⊆` the deprecated `typePA` over-claim (issue 9008)
+
+The `(13.18)` support pin `S15.Hypothesis.tauS_mu_row0_diff_support` places the `μ`-column
+difference
+support inside `S10.typePACore0 = S10.typePACore ∪ V^S`, whose `A`-part
+`S10.typePACore = centralizerSupport (M_σ^#) S'` is the **honest** Peterfalvi (8.10)/(13.2.e)
+type-`P₂` support (indexed over the *core* `M_σ^#`; issue 9008 Option A).  The old
+`typePA = centralizerSupport S^# S' = (S')^#` is the **over-claim** (issue 9008 phantom): it wrongly
+includes the Frobenius-complement points `U^#` (where `C_{S_σ} = 1`).
+
+**The pin's support target is therefore correct, and the `(13.18)` route is clean**: the S06
+certain-type bound `certainTypeDiffSupported : SupportedClassFunctions (A ∪ V^S) L` is **parametric
+in the Hypothesis46 support `A`** — so a `Hypothesis46 (S10.typePACore S) ↥S` (built with lane-c's
+`dadeHypS0`, whose support is exactly `S10.typePACore0`) delivers the pin's honest support
+`S10.typePACore0` *directly*, with no `typePA0` over-claim in the way.  The remaining pin-2/3
+assembly is thus the type-`P₂` `Hypothesis46`-for-`S` (`A = S10.typePACore`, `dade0 = dadeHypS0`),
+which lives in lane-c's `S15_HonestTypeP2A0` (it consumes `dadeHypS0`); cf. issue 9076.
+
+The lemma below just records the containment `honest ⊆ over-claim` (immediate from `M_σ ≤ S` and
+`centralizerSupport` monotonicity in its source), a sanity check on the two support notions. -/
+theorem typePACore_subset_typePA {M : Subgroup G}
+    (data : OddOrder.GroupTheory.TypePData M) :
+    S10.typePACore M ⊆ OddOrder.GroupTheory.typePA M data := by
+  intro y hy
+  rw [S10.mem_typePACore] at hy
+  obtain ⟨hyM', hy1, x, hx, hxcent⟩ := hy
+  simp only [OddOrder.GroupTheory.typePA, OddOrder.GroupTheory.centralizerSupport,
+    Set.mem_ofPred_eq]
+  rw [OddOrder.GroupTheory.sharpSubgroup, Set.mem_sdiff_singleton] at hx
+  exact ⟨hyM', hy1, x, by
+    rw [OddOrder.GroupTheory.sharpSubgroup, Set.mem_sdiff_singleton]
+    exact ⟨OddOrder.BG.Ch3.S10.Msigma_le M hx.1, hx.2⟩, hxcent⟩
+
+/-! ## The type-`P₂`-usable `Hypothesis46` constructor lives in §8
+
+The type-uniform `Hypothesis46` producer that this file used to carry
+(`hypothesis46OfTypePData`) has been promoted to the §8 file where (8.15) claim 2 belongs:
+`OddOrder.Peterfalvi.S10.typePData_toHypothesis46_ofSupport` (support-parametric core) with the
+book-literal instances `typePACore_toHypothesis46` / `_core` / `_hallKernel`
+(`S10_Hypothesis46TypeP.lean`; hub ruling 9163 Option B′).  Unlike the version here, the §8
+producer takes the (8.4.a) Hall coprimality `hHall` as an explicit argument — matching the book,
+which cites (8.4.a) at this point — so it needs neither `hG`/`hM` nor a type hypothesis.
+`S15.Hypothesis.hyp46S` is the type-`P₂` `S`-instance. -/
+
+
+end OddOrder.Peterfalvi.S15

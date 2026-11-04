@@ -1,0 +1,15 @@
+Cayley–Erdős–Gyárfás
+Copyright 2026 Michael C. Burkhart
+
+This Lean formalization adapts the author's earlier Erdős–Gyárfás–Cayley
+draft formalization. The project code is distributed under Apache-2.0.
+AI assistance is described in formalization.yaml.
+
+The sources in vendor/odd-order are adapted from Yawara Ishida's
+odd-order formalization under Apache-2.0. Original copyright notices
+are retained. See vendor/odd-order/README.md for the upstream commit
+and compatibility changes.
+
+Project layout and verification scripts are adapted from
+PalomarRegistry/PalomarTemplate, revision
+2891de4c48955af824969a263d31b25e7a9a1406, under Apache-2.0.
