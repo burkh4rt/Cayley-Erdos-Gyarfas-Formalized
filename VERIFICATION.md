@@ -33,4 +33,4 @@ lake comparator --inadvisably-no-sandbox --config /path/to/local-comparator.json
 
 Comparator accepted the Challenge/Solution comparison and returned exit status 0. Con-ron verified 91,375 declarations, NanoDa accepted the Solution, and Lean's default kernel accepted the Solution. Comparator's final verdict was `Your solution is okay!`
 
-This run used the native macOS toolchain without Bubblewrap. The repository's Linux workflow runs [the sandboxed command](scripts/verify-comparator.sh) on push. Linux sandbox verification and the author's personal review of the Challenge are pending for this snapshot.
+This run used the native macOS toolchain without Bubblewrap. The repository's Linux workflow runs [the sandboxed command](scripts/verify-comparator.sh) on push.

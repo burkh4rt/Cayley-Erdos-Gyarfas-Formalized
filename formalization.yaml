@@ -12,8 +12,12 @@ project:
     odd-order group, and a power-of-two cycle lifts through a normal 2-subgroup
     of a finite group. The cycle conclusion also holds for finite nilpotent
     groups with a generating set satisfying the same degree condition.
-  authors: ["Michael C. Burkhart"]
-  responsible_maintainers: ["Michael C. Burkhart"]
+  authors:
+    - name: Michael C. Burkhart
+      orcid: "0000-0002-2772-5840"
+  responsible_maintainers:
+    - name: Michael C. Burkhart
+      orcid: "0000-0002-2772-5840"
   license: "Apache-2.0"
 
 classification:
@@ -27,20 +31,25 @@ sources:
     id: "arXiv:2611.05060v1"
     location: "https://arxiv.org/abs/2611.05060v1"
     relationship: "formalizes"
+    author_endorsement: participated
     note: >-
       Version of 3 November 2026. Theorem 1.1, the noncyclic strengthening
-      immediately following it, Lemmas 1.2 and 1.3, and Corollary 1.4.
-      Sections 2 and 3 contain the proofs. REVIEW.md compares their arguments
-      with the Lean proofs.
-    license: "arXiv perpetual, non-exclusive license to distribute (https://arxiv.org/licenses/nonexclusive-distrib/1.0/)"
+      immediately following it, Lemmas 1.2 and 1.3, and Corollary 1.4. Sections
+      2 and 3 contain the proofs. REVIEW.md compares their arguments with the
+      Lean proofs. The source author requested this formalization and has completed human
+      review of its definitions and theorem statements, personally verified the submission, and read
+      Challenge.lean.
+    license: "arXiv perpetual, non-exclusive license to distribute
+      (https://arxiv.org/licenses/nonexclusive-distrib/1.0/)"
 
 related_formalizations:
-  - id: "Erdős–Gyárfás–Cayley-Draft-Formalized, local Git commit 6615bdcb0d5692c56b5f597d3704385f25b227f5"
+  - id: "Erdős–Gyárfás–Cayley-Draft-Formalized, local Git commit
+      6615bdcb0d5692c56b5f597d3704385f25b227f5"
     relationship: "builds-on"
     note: >-
       Earlier Lean development of a draft of the same paper. This project
-      carries forward its substantive Lean proofs and vendored dependency.
-      The statement surface, namespace, comparison configuration, manuscript
+      carries forward its substantive Lean proofs and vendored dependency. The
+      statement surface, namespace, comparison configuration, manuscript
       alignment and review record were revised for arXiv v1.
   - id: "https://github.com/yawara/odd-order/tree/7a412eae81e9510a684fd8c180cf1fbd47b8d00d"
     relationship: "builds-on"
@@ -51,9 +60,9 @@ related_formalizations:
 
 status:
   scope: >-
-    The four numbered results and the noncyclic strengthening are proved.
-    The five intentional holes in the independent Challenge are excluded from
-    the count below. The Solution and its imported proof development use no
+    The four numbered results and the noncyclic strengthening are proved. The
+    five intentional holes in the independent Challenge are excluded from the
+    count below. The Solution and its imported proof development use no
     unproved literature assumptions.
   sorry_count: 0
   sorry_in_definitions: 0
@@ -105,31 +114,32 @@ automation:
         formalization and assess fidelity against the revised manuscript.
   notes: >-
     Michael C. Burkhart is the author of the source paper and the responsible
-    maintainer named in the earlier project. His personal verification of the
-    current Challenge is pending.
+    maintainer named in the earlier project. He personally reviewed its definitions and theorem statements, verified the submission, and read
+      Challenge.lean.
 
 fidelity:
   divergences: >-
-    The independent statements use the paper's simple undirected Cayley
-    graph, standing generating-set assumptions, and exponent n ≥ 2. No extra
+    The independent statements use the paper's simple undirected Cayley graph,
+    standing generating-set assumptions, and exponent n ≥ 2. No extra
     group-theoretic hypothesis is imposed. Lemma 1.2 constructs compatible
     lifts of segments directly. Lemma 1.3 follows from a general cycle lift
     whose length multiplier is the order of a kernel element. The odd-order
     induction retains the paper's four affine cases and cycle words, with
-    algebraic certificates for coordinate and intersection checks.
-    The pure 2-group case uses a commuting square or an alternating cycle.
-    REVIEW.md gives the correspondence for each result and distinguishes
-    intermediate calculations from the five compared conclusions.
+    algebraic certificates for coordinate and intersection checks. The pure
+    2-group case uses a commuting square or an alternating cycle. REVIEW.md
+    gives the correspondence for each result and distinguishes intermediate
+    calculations from the five compared conclusions.
 
 review:
-  status: "agent-reviewed"
-  reviewers: []
+  status: author-verified
+  reviewers:
+    - Michael C. Burkhart
   notes: >-
     AI-assisted comparison against the versioned arXiv source covers the
-    hypotheses, cycle length, left translation and cyclic rotation,
-    quotient generating sets, and proof methods. The author intends to verify
-    this Challenge personally before submission. VERIFICATION.md records the
-    separate mechanical checks.
+    hypotheses, cycle length, left translation and cyclic rotation, quotient
+    generating sets, and proof methods. VERIFICATION.md records the
+    separate mechanical checks. M.C.B. has completed human review of the definitions
+    and theorem statements, personally verified the submission, and read Challenge.lean.
 
 alignment:
   namespace: "CayleyErdősGyárfás"
@@ -157,6 +167,6 @@ alignment:
 
 acknowledgements: >-
   Lean and Mathlib supply the proof environment and standard mathematical
-  definitions. Yawara Ishida's odd-order development supplies the group
-  theory identified above. The project layout and verification scripts draw
-  on PalomarRegistry/PalomarTemplate at 2891de4c48955af824969a263d31b25e7a9a1406.
+  definitions. Yawara Ishida's odd-order development supplies the group theory
+  identified above. The project layout and verification scripts draw on
+  PalomarRegistry/PalomarTemplate at 2891de4c48955af824969a263d31b25e7a9a1406.
